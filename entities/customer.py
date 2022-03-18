@@ -1,5 +1,6 @@
 from resources import order
 
+
 class Customer:
     def __init__(self, env, quantity, wholesaler):
         self.env = env

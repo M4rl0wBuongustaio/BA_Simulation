@@ -3,6 +3,7 @@ class Carrier:
         self.env = env
         self.order = order
 
-    def deliver(self):
+    def deliver(self, delivery_duration):
         # TODO: Set up delivery.
-        self.order.get_debtor()
+        yield self.env.timeout(delivery_duration)
+        self.order.get_debtor().receive_delivery()
