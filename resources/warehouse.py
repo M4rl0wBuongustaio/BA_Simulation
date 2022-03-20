@@ -34,7 +34,6 @@ class Warehouse:
                 self.stock[index].set_quantity(self.stock[index].get_quantity() - quantity)
                 if self.stock[index].get_quantity() == 0:
                     self.stock.remove(self.stock[index])
-                return
             else:
                 quantity = quantity - self.stock[index].get_quantity()
                 self.stock.remove(self.stock[index])

@@ -1,9 +1,14 @@
-class Carrier:
-    def __init__(self, env, order):
-        self.env = env
-        self.order = order
+from config import ROUTING
 
-    def deliver(self, delivery_duration):
-        # TODO: Set up delivery.
-        yield self.env.timeout(delivery_duration)
-        self.order.get_debtor().receive_delivery()
+
+class Carrier:
+    def __init__(self, env, delivery):
+        self.env = env
+        self.delivery = delivery
+
+    def deliver(self):
+        debtor_address = self.delivery.get_debtor().get_address()
+        for rout in ROUTING.keys():
+            if rout == debtor_address:
+                yield self.env.timeout(ROUTING[rout])
+                self.delivery.get_debtor().receive_delivery()
