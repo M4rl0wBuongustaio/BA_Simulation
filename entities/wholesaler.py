@@ -1,5 +1,5 @@
 import queue
-from resources import carrier, order
+from resources import carrier, order, delivery, product_batch
 
 
 class Wholesaler:
@@ -27,7 +27,7 @@ class Wholesaler:
             self.add_backorder(customer_order)
 
     def handle_order(self, customer_order):
-        order_quantity = customer_order.get_quantity
+        order_quantity = customer_order.get_quantity()
         available_stock = self.warehouse.get_available_stock(self.delivery_duration)
         if available_stock >= order_quantity:
             if (available_stock - order_quantity) < self.warehouse.get_reorder_point() \
@@ -43,7 +43,7 @@ class Wholesaler:
     def handle_backorders(self):
         while not self.backorder.empty():
             customer_order = self.get_last_backorder()
-            order_quantity = customer_order.get_quantity
+            order_quantity = customer_order.get_quantity()
             available_stock = self.warehouse.get_available_stock(self.delivery_duration)
             if available_stock >= order_quantity:
                 if (available_stock - order_quantity) < self.warehouse.get_reorder_point() \
@@ -60,11 +60,20 @@ class Wholesaler:
 
     def place_order(self):
         self.delivery_pending = True
-        order_quantity = self.warehouse.calculate_order_quantity()
-        self.manufacturer.receive_order(order.Order(order_quantity, self))
+        order_quantity = self.warehouse.calculate_order_quantity(self.delivery_duration)
+        self.manufacturer.receive_order(order.Order(quantity=order_quantity, debtor=self))
 
     def initiate_delivery(self, customer_order):
-        self.env.process(carrier.Carrier(self.env, customer_order).deliver())
+        ex_date = self.warehouse.get_product_expiration_date()
+        pro_date = self.warehouse.get_product_production_date()
+        product = product_batch.ProductBatch(
+            quantity=customer_order.get_quantity(),
+            expiration_date=ex_date,
+            production_date=pro_date
+            )
+        delivery_details = delivery.Delivery(product_batch=product, debtor=customer_order.get_debtor())
+        self.warehouse.reduce_stock(customer_order.get_quantity())
+        self.env.process(carrier.Carrier(self.env, delivery=delivery_details).deliver())
 
     def add_backorder(self, customer_order):
         self.backorder.put(customer_order)

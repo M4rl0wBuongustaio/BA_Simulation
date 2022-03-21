@@ -21,7 +21,11 @@ class Customer:
         return id(self)
 
     def place_order(self):
-        self.wholesaler.receive_delivery(order.Order(self.quantity, self))
+        self.wholesaler.receive_order(order.Order(self.quantity, self))
 
-    def receive_delivery(self):
-        return
+    def receive_delivery(self, delivery):
+        print(
+            'Customer: ' + str(id(self)) + ' received a delivery. \n'
+            + 'Expiration date: ' + str(delivery.get_product_batch().get_expiration_date()) + '\n'
+            + 'Current date: ' + str(self.env.now) + '\n'
+        )

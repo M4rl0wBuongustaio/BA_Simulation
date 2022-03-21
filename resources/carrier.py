@@ -11,4 +11,4 @@ class Carrier:
         for rout in ROUTING.keys():
             if rout == debtor_address:
                 yield self.env.timeout(ROUTING[rout])
-                self.delivery.get_debtor().receive_delivery()
+                self.delivery.get_debtor().receive_delivery(self.delivery)

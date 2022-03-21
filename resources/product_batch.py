@@ -18,3 +18,9 @@ class ProductBatch:
 
     def set_expiration_date(self, date):
         self.expiration_date = date
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        raise StopIteration
