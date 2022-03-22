@@ -29,9 +29,9 @@ class Wholesaler:
     def handle_order(self, customer_order):
         order_quantity = customer_order.get_quantity()
         available_stock = self.warehouse.get_available_stock(self.delivery_duration)
+        reorder_point = self.warehouse.get_reorder_point()
         if available_stock >= order_quantity:
-            if (available_stock - order_quantity) < self.warehouse.get_reorder_point() \
-                    and not self.delivery_pending:
+            if (available_stock - order_quantity) <= reorder_point and not self.delivery_pending:
                 self.place_order()
             self.initiate_delivery(customer_order)
         elif not self.delivery_pending:
@@ -41,15 +41,16 @@ class Wholesaler:
             self.add_backorder(customer_order)
 
     def handle_backorders(self):
+        available_stock = self.warehouse.get_available_stock(self.delivery_duration)
+        reorder_point = self.warehouse.get_reorder_point()
         while not self.backorder.empty():
             customer_order = self.get_last_backorder()
             order_quantity = customer_order.get_quantity()
-            available_stock = self.warehouse.get_available_stock(self.delivery_duration)
             if available_stock >= order_quantity:
-                if (available_stock - order_quantity) < self.warehouse.get_reorder_point() \
-                        and not self.delivery_pending:
+                if (available_stock - order_quantity) <= reorder_point and not self.delivery_pending:
                     self.place_order()
                 self.initiate_delivery(customer_order)
+                available_stock -= order_quantity
             elif not self.delivery_pending:
                 self.add_backorder(customer_order)
                 self.place_order()
@@ -76,10 +77,13 @@ class Wholesaler:
         self.env.process(carrier.Carrier(self.env, delivery=delivery_details).deliver())
 
     def add_backorder(self, customer_order):
-        self.backorder.put(customer_order)
+        self.backorder.put_nowait(customer_order)
 
     def get_last_backorder(self):
         return self.backorder.get_nowait()
+
+    def get_count_backorders(self):
+        return self.backorder.qsize()
 
     def get_address(self):
         return self.address
