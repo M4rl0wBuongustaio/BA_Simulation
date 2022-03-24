@@ -5,6 +5,7 @@ class Warehouse:
         self.target_stock = target_stock
         # A list of product_batch objects.
         self.stock = stock
+        self.order_date = []
 
     def get_reorder_point(self):
         return self.reorder_point
@@ -49,7 +50,14 @@ class Warehouse:
 
     def calculate_order_quantity(self, delivery_time):
         order_quantity = self.get_target_stock() - self.get_available_stock(delivery_time)
+        self.mark_order_date()
         return order_quantity
 
     def receive_delivery(self, product_batch):
         self.stock.append(product_batch)
+
+    def mark_order_date(self):
+        self.order_date.append(self.env.now)
+
+    def get_order_dates(self):
+        return self.order_date
