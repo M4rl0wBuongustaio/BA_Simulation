@@ -1,16 +1,23 @@
-import queue
 from resources import carrier, order, delivery, product_batch
+from config import ROUTING
+import queue
 
 
 class Wholesaler:
-    def __init__(self, env, warehouse, manufacturer, dis_start, dis_duration, delivery_duration, address):
+    def __init__(self, env, warehouse, manufacturer, dis_start, dis_duration, delivery_duration, address,
+                 average_demand):
         self.env = env
         self.warehouse = warehouse
         self.manufacturer = manufacturer
         self.dis_start = dis_start
         self.dis_duration = dis_duration
         self.delivery_duration = delivery_duration
+        # Calculate the delivery duration to wholesaler from upstream supplier. Relevant for order quantity.
+        self.delivery_duration_us = manufacturer.get_lead_time() + manufacturer.get_delivery_duration()
+        self.daily_orders = 0
+        self.daily_backorders = 0
         self.address = address
+        self.average_demand = average_demand
         self.delivery_pending = False
         self.backorder = queue.Queue()
 
@@ -21,6 +28,7 @@ class Wholesaler:
             self.handle_backorders()
 
     def receive_order(self, customer_order):
+        self.add_daily_order()
         if self.backorder.empty():
             self.handle_order(customer_order)
         else:
@@ -28,7 +36,10 @@ class Wholesaler:
 
     def handle_order(self, customer_order):
         order_quantity = customer_order.get_quantity()
-        available_stock = self.warehouse.get_available_stock(self.delivery_duration)
+        available_stock = self.warehouse.get_available_stock(
+            delivery_duration=self.delivery_duration,
+            remove_expired=True
+        )
         reorder_point = self.warehouse.get_reorder_point()
         if available_stock >= order_quantity:
             if (available_stock - order_quantity) <= reorder_point and not self.delivery_pending:
@@ -41,7 +52,10 @@ class Wholesaler:
             self.add_backorder(customer_order)
 
     def handle_backorders(self):
-        available_stock = self.warehouse.get_available_stock(self.delivery_duration)
+        available_stock = self.warehouse.get_available_stock(
+            delivery_duration=self.delivery_duration,
+            remove_expired=True
+        )
         reorder_point = self.warehouse.get_reorder_point()
         while not self.backorder.empty():
             customer_order = self.get_last_backorder()
@@ -62,6 +76,8 @@ class Wholesaler:
     def place_order(self):
         self.delivery_pending = True
         order_quantity = self.warehouse.calculate_order_quantity(self.delivery_duration)
+        order_quantity += self.average_demand * self.delivery_duration_us
+        print('Wholesaler orders %i' % order_quantity)
         self.manufacturer.receive_order(order.Order(quantity=order_quantity, debtor=self))
 
     def initiate_delivery(self, customer_order):
@@ -71,12 +87,13 @@ class Wholesaler:
             quantity=customer_order.get_quantity(),
             expiration_date=ex_date,
             production_date=pro_date
-            )
+        )
         delivery_details = delivery.Delivery(product_batch=product, debtor=customer_order.get_debtor())
         self.warehouse.reduce_stock(customer_order.get_quantity())
         self.env.process(carrier.Carrier(self.env, delivery=delivery_details).deliver())
 
     def add_backorder(self, customer_order):
+        self.add_daily_backorder()
         self.backorder.put_nowait(customer_order)
 
     def get_last_backorder(self):
@@ -87,3 +104,22 @@ class Wholesaler:
 
     def get_address(self):
         return self.address
+
+    def add_daily_order(self):
+        self.daily_orders += 1
+
+    def get_daily_orders(self):
+        return self.daily_orders
+
+    def reset_daily_back_orders(self):
+        self.daily_orders = 0
+        self.daily_backorders = 0
+
+    def add_daily_backorder(self):
+        self.daily_backorders += 1
+
+    def get_daily_backorders(self):
+        return self.daily_backorders
+
+    def get_average_demand(self):
+        return self.average_demand

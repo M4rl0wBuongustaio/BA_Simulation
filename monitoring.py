@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from os import path
 import pandas as pd
+import numpy as np
 
 
 class Monitoring:
@@ -22,43 +23,50 @@ class Monitoring:
         else:
             self.data_set.to_csv(path_or_buf=name, mode='a', header=False)
 
-    def plot_inventories(self, name):
+    def plot(self):
+        self.data_set.plot(
+            x='date',
+            y='mr_depreciated_goods',
+            kind='line',
+            grid=True,
+            figsize=(19.2, 10.8)
+        )
+        plt.xticks(np.arange(0, 365, 30))
+        plt.show()
+        self.plot_2()
+
+    def plot_2(self):
+        self.data_set.plot(
+            x='date',
+            y='ws_depreciated_goods',
+            kind='line',
+            grid=True,
+            figsize=(19.2, 10.8)
+        )
+        plt.xticks(np.arange(0, 365, 30))
+        plt.show()
+        self.plot_3()
+
+    def plot_3(self):
         self.data_set.plot(
             x='date',
             y=['mr_stock', 'mr_backorder'],
             kind='line',
-            title='Inventory development of MANUFACTURER warehouse and backorders',
             grid=True,
             figsize=(19.2, 10.8)
         )
-        plt.axhline(
-            y=self.mr_warehouse.get_reorder_point(),
-            c='black'
-        )
-        plt.savefig(name + '.pdf')
+        plt.xticks(np.arange(0, 365, 30))
         plt.show()
-        self.plot_inventories_order_dates(name)
+        self.plot_4()
 
-    def plot_inventories_order_dates(self, name):
-        order_dates = self.mr_warehouse.get_order_dates()
+    def plot_4(self):
         self.data_set.plot(
             x='date',
-            y=['mr_stock', 'mr_backorder'],
+            y=['ws_stock', 'ws_backorder'],
             kind='line',
-            title='Inventory development of MANUFACTURER warehouse',
             grid=True,
             figsize=(19.2, 10.8)
         )
-        plt.axhline(
-            y=self.mr_warehouse.get_reorder_point(),
-            c='black'
-        )
-        for order_date in order_dates:
-            plt.axvline(
-                x=order_date,
-                c='gainsboro',
-                linestyle='--'
-            )
-
-        plt.savefig(name + '_order_dates' + '.pdf')
+        plt.xticks(np.arange(0, 365, 30))
         plt.show()
+
