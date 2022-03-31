@@ -12,7 +12,7 @@ class Carrier:
         for rout in ROUTING.keys():
             if rout == debtor_address:
                 yield self.env.timeout(
-                    abs(int(np.random.normal(loc=ROUTING[rout], scale=1, size=1)))
+                    abs(round(np.random.normal(loc=ROUTING[rout], scale=1, size=1)[0]))
                 )
                 self.delivery.get_debtor().receive_delivery(self.delivery)
                 break

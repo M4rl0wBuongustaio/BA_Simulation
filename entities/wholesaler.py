@@ -23,7 +23,11 @@ class Wholesaler:
 
     def receive_delivery(self, delivery):
         self.delivery_pending = False
-        self.warehouse.receive_delivery(delivery.get_product_batch())
+        if len(delivery.get_product_batch()) > 1:
+            for i in range(len(delivery.get_product_batch())):
+                self.warehouse.receive_delivery(delivery.get_product_batch()[i])
+        else:
+            self.warehouse.receive_delivery(delivery.get_product_batch()[0])
         if not self.backorder.empty():
             self.handle_backorders()
 
@@ -42,7 +46,7 @@ class Wholesaler:
         )
         reorder_point = self.warehouse.get_reorder_point()
         if available_stock >= order_quantity:
-            if (available_stock - order_quantity) <= reorder_point and not self.delivery_pending:
+            if (available_stock - order_quantity) < reorder_point and not self.delivery_pending:
                 self.place_order()
             self.initiate_delivery(customer_order)
         elif not self.delivery_pending:
@@ -61,7 +65,7 @@ class Wholesaler:
             customer_order = self.get_last_backorder()
             order_quantity = customer_order.get_quantity()
             if available_stock >= order_quantity:
-                if (available_stock - order_quantity) <= reorder_point and not self.delivery_pending:
+                if (available_stock - order_quantity) < reorder_point and not self.delivery_pending:
                     self.place_order()
                 self.initiate_delivery(customer_order)
                 available_stock -= order_quantity
@@ -81,14 +85,19 @@ class Wholesaler:
         self.manufacturer.receive_order(order.Order(quantity=order_quantity, debtor=self))
 
     def initiate_delivery(self, customer_order):
-        ex_date = self.warehouse.get_product_expiration_date()
-        pro_date = self.warehouse.get_product_production_date()
-        product = product_batch.ProductBatch(
-            quantity=customer_order.get_quantity(),
-            expiration_date=ex_date,
-            production_date=pro_date
-        )
-        delivery_details = delivery.Delivery(product_batch=product, debtor=customer_order.get_debtor())
+        ex_date = self.warehouse.get_product_expiration_date(customer_order.get_quantity())
+        pro_date = self.warehouse.get_product_production_date(customer_order.get_quantity())
+        var_product_batches = []
+        for key in ex_date.keys():
+            i = 0
+            pb = product_batch.ProductBatch(
+                quantity=ex_date[key],
+                expiration_date=key,
+                production_date=list(pro_date)[i]
+            )
+            var_product_batches.append(pb)
+            i += 1
+        delivery_details = delivery.Delivery(product_batch=var_product_batches, debtor=customer_order.get_debtor())
         self.warehouse.reduce_stock(customer_order.get_quantity())
         self.env.process(carrier.Carrier(self.env, delivery=delivery_details).deliver())
 

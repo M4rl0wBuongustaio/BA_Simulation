@@ -13,10 +13,10 @@ class RawMaterialSupplier:
         debtor = order.get_debtor()
         production_date = self.env.now
         expiration_date = self.durability + self.env.now
-        products = product_batch.ProductBatch(
+        product = product_batch.ProductBatch(
             quantity=quantity,
             production_date=production_date,
             expiration_date=expiration_date
         )
-        raw_material_delivery = delivery.Delivery(products, debtor)
+        raw_material_delivery = delivery.Delivery([product], debtor)
         self.env.process(carrier.Carrier(self.env, raw_material_delivery).deliver())

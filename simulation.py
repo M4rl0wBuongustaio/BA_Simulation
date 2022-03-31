@@ -18,19 +18,19 @@ def simulate(iteration):
     rms = raw_material_supplier.RawMaterialSupplier(env=env, dis_start=0, dis_duration=0, durability=expiration)
 
     # Manufacturer
-    mr_product_batch = product_batch.ProductBatch(quantity=665, production_date=0, expiration_date=expiration - 2)
+    mr_product_batch = product_batch.ProductBatch(quantity=470, production_date=23, expiration_date=43)
     mr_stock = [mr_product_batch]
-    mr_warehouse = warehouse.Warehouse(env=env, reorder_point=225, target_stock=645, stock=mr_stock)
+    mr_warehouse = warehouse.Warehouse(env=env, reorder_point=51, target_stock=470, stock=mr_stock)
     mr = manufacturer.Manufacturer(env=env, raw_material_supplier=rms, dis_start=0, dis_duration=0,
-                                   expiration_extension=extension, warehouse=mr_warehouse, delivery_duration=2,
+                                   expiration_extension=extension, warehouse=mr_warehouse, delivery_duration=1,
                                    lead_time=2,
                                    address=0)
 
     # Wholesaler
-    ws_product_batch = product_batch.ProductBatch(quantity=445, production_date=0,
+    ws_product_batch = product_batch.ProductBatch(quantity=450, production_date=0,
                                                   expiration_date=expiration + extension - 5)
     ws_stock = [ws_product_batch]
-    ws_warehouse = warehouse.Warehouse(env=env, reorder_point=70, target_stock=445, stock=ws_stock)
+    ws_warehouse = warehouse.Warehouse(env=env, reorder_point=75, target_stock=450, stock=ws_stock)
     ws = wholesaler.Wholesaler(env=env, warehouse=ws_warehouse, manufacturer=mr, dis_start=0, dis_duration=0,
                                delivery_duration=1, address=1, average_demand=15)
 
@@ -51,7 +51,7 @@ def simulate(iteration):
                 'date': env.now,
                 'mr_stock': mr_warehouse.get_available_stock(
                     delivery_duration=0,
-                    remove_expired=False
+                    remove_expired=True
                 ),
                 'mr_backorder': mr.get_count_backorders(),
                 'mr_service_level': mr_service_level,
@@ -70,7 +70,7 @@ def simulate(iteration):
 
     def customer_generator():
         while True:
-            count_customers = int(np.random.normal(loc=15, scale=1, size=1))
+            count_customers = round(np.random.normal(loc=15, scale=1, size=1)[0])
             for i in range(count_customers):
                 customer.Customer(env=env, quantity=1, wholesaler=ws, address=2).place_order()
             yield env.timeout(1)
@@ -80,6 +80,8 @@ def simulate(iteration):
     env.run(until=365)
     # var_monitor.save_data('scenario_0')
     var_monitor.plot()
+    print(ws_warehouse.get_order_dates())
+    print(mr_warehouse.get_order_dates())
 
 
 for i in range(1):

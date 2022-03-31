@@ -34,11 +34,37 @@ class Warehouse:
             self.stock = valid_batches
         return stock
 
-    def get_product_expiration_date(self):
-        return self.stock[0].get_expiration_date()
+    def get_product_expiration_date(self, quantity):
+        ex_date = {}
+        index = 0
+        while True:
+            if self.stock[index].get_quantity() >= quantity:
+                ex_date[self.stock[index].get_expiration_date()] = quantity
+                return ex_date
+            elif self.stock[index].get_quantity() > 0:
+                ex_date[self.stock[index].get_expiration_date()] = self.stock[index].get_quantity()
+                quantity -= self.stock[index].get_quantity()
+                index += 1
+                continue
+            elif self.stock[index].get_quantity() >= 0:
+                index += 1
+                continue
 
-    def get_product_production_date(self):
-        return self.stock[0].get_production_date()
+    def get_product_production_date(self, quantity):
+        pro_date = {}
+        index = 0
+        while True:
+            if self.stock[index].get_quantity() >= quantity:
+                pro_date[self.stock[index].get_production_date()] = quantity
+                return pro_date
+            elif self.stock[index].get_quantity() > 0:
+                pro_date[self.stock[index].get_production_date()] = self.stock[index].get_quantity()
+                quantity -= self.stock[index].get_quantity()
+                index += 1
+                continue
+            elif self.stock[index].get_quantity() >= 0:
+                index += 1
+                continue
 
     def reduce_stock(self, quantity):
         # FIFO
