@@ -17,11 +17,14 @@ class Monitoring:
     def print_data(self):
         print(self.data_set)
 
-    def save_data(self, name):
+    def get_data_set(self):
+        return self.data_set
+
+    def save_data(self, name, df):
         if not path.exists(self.path + name):
-            self.data_set.to_csv(path_or_buf=name)
+            df.to_csv(path_or_buf=name)
         else:
-            self.data_set.to_csv(path_or_buf=name, mode='a', header=False)
+            df.to_csv(path_or_buf=name, mode='a', header=False)
 
     def plot(self):
         self.data_set.plot(

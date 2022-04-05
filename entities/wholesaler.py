@@ -81,7 +81,7 @@ class Wholesaler:
         self.delivery_pending = True
         order_quantity = self.warehouse.calculate_order_quantity(self.delivery_duration)
         order_quantity += self.average_demand * self.delivery_duration_us
-        print('Wholesaler orders %i' % order_quantity)
+        # print(order_quantity)
         self.manufacturer.receive_order(order.Order(quantity=order_quantity, debtor=self))
 
     def initiate_delivery(self, customer_order):

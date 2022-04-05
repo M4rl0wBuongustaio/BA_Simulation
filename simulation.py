@@ -1,8 +1,9 @@
+import pandas as pd
+
 from entities import customer, wholesaler, manufacturer, raw_material_supplier
-from resources import warehouse, product_batch, order
+from resources import warehouse, product_batch
 import numpy as np
 import monitoring
-import random
 import simpy
 from datetime import datetime
 
@@ -13,18 +14,18 @@ def simulate(iteration):
     env = simpy.Environment()
     expiration = 20
     extension = 30
+    delivery_data = [[0], [0]]
 
     # Raw Material Supplier
-    rms = raw_material_supplier.RawMaterialSupplier(env=env, dis_start=0, dis_duration=0, durability=expiration)
+    rms = raw_material_supplier.RawMaterialSupplier(env=env, dis_start=0, dis_duration=0, expiration_date=expiration)
 
     # Manufacturer
-    mr_product_batch = product_batch.ProductBatch(quantity=470, production_date=23, expiration_date=43)
+    mr_product_batch = product_batch.ProductBatch(quantity=420, production_date=23, expiration_date=43)
     mr_stock = [mr_product_batch]
-    mr_warehouse = warehouse.Warehouse(env=env, reorder_point=51, target_stock=470, stock=mr_stock)
-    mr = manufacturer.Manufacturer(env=env, raw_material_supplier=rms, dis_start=0, dis_duration=0,
+    mr_warehouse = warehouse.Warehouse(env=env, reorder_point=5, target_stock=420, stock=mr_stock)
+    mr = manufacturer.Manufacturer(env=env, raw_material_supplier=rms, dis_start=183, dis_duration=60,
                                    expiration_extension=extension, warehouse=mr_warehouse, delivery_duration=1,
-                                   lead_time=2,
-                                   address=0)
+                                   lead_time=2, dis_lead_time=20, address=0)
 
     # Wholesaler
     ws_product_batch = product_batch.ProductBatch(quantity=450, production_date=0,
@@ -58,7 +59,7 @@ def simulate(iteration):
                 'mr_depreciated_goods': mr_warehouse.get_depreciated_goods_count(),
                 'ws_stock': ws_warehouse.get_available_stock(
                     delivery_duration=0,
-                    remove_expired=False
+                    remove_expired=True
                 ),
                 'ws_backorder': ws.get_count_backorders(),
                 'ws_service_level': ws_service_level,
@@ -70,21 +71,29 @@ def simulate(iteration):
 
     def customer_generator():
         while True:
-            count_customers = round(np.random.normal(loc=15, scale=1, size=1)[0])
+            count_customers = abs(round(np.random.normal(loc=15, scale=1, size=1)[0]))
             for i in range(count_customers):
-                customer.Customer(env=env, quantity=1, wholesaler=ws, address=2).place_order()
+                customer.Customer(
+                    env=env, quantity=1, wholesaler=ws, address=2, delivery_monitoring=delivery_data
+                ).place_order()
             yield env.timeout(1)
 
     env.process(customer_generator())
     env.process(monitor())
     env.run(until=365)
-    # var_monitor.save_data('scenario_0')
-    var_monitor.plot()
-    print(ws_warehouse.get_order_dates())
-    print(mr_warehouse.get_order_dates())
+    var_monitor.save_data(df=pd.DataFrame(
+        {
+            'date': delivery_data[0],
+            'expiration_date': delivery_data[1]
+        }
+    ), name='delivery_data_s2')
+    var_monitor.save_data(name='scenario_2', df=var_monitor.get_data_set())
+    # var_monitor.plot()
+    # print(ws_warehouse.get_order_dates())
+    # print(mr_warehouse.get_order_dates())
 
 
-for i in range(1):
+for i in range(1000):
     simulate(iteration=i)
 
 end = datetime.now()

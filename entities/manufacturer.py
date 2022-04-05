@@ -4,7 +4,7 @@ import queue
 
 
 class Manufacturer:
-    def __init__(self, env, raw_material_supplier, dis_start, dis_duration,
+    def __init__(self, env, raw_material_supplier, dis_start, dis_duration, dis_lead_time,
                  expiration_extension, warehouse, delivery_duration, lead_time, address):
         self.env = env
         self.raw_material_supplier = raw_material_supplier
@@ -14,6 +14,7 @@ class Manufacturer:
         self.warehouse = warehouse
         self.delivery_duration = delivery_duration
         self.lead_time = lead_time
+        self.dis_lead_time = dis_lead_time
         self.address = address
         self.daily_orders = 0
         self.daily_backorders = 0
@@ -45,8 +46,6 @@ class Manufacturer:
         customer = customer_order.get_debtor()
         available_stock = self.warehouse.get_available_stock(
             delivery_duration=(self.delivery_duration + self.lead_time - self.expiration_extension),
-            # Fulfill order in terms of quantity AND expiration date.
-            # + (order_quantity / customer.get_average_demand())
             remove_expired=True
         )
         if available_stock >= order_quantity:
@@ -81,13 +80,11 @@ class Manufacturer:
         reorder_point = self.warehouse.get_reorder_point()
         available_stock = self.warehouse.get_available_stock(
             delivery_duration=(self.delivery_duration + self.lead_time - self.expiration_extension),
-            # Fulfill order in terms of quantity AND expiration date.
-            # + (order_quantity / customer.get_average_demand())
             remove_expired=False
         )
         if available_stock <= reorder_point and not self.delivery_pending:
             self.env.process(self.place_scheduled_order(customer_order))
-        yield self.env.timeout(abs(round(np.random.normal(loc=self.lead_time, scale=1, size=1)[0])))
+        yield self.env.timeout(abs(round(np.random.normal(loc=self.get_lead_time(), scale=1, size=1)[0])))
         self.initiate_delivery(var_delivery)
 
     def initiate_delivery(self, var_delivery):
@@ -95,11 +92,10 @@ class Manufacturer:
 
     def place_scheduled_order(self, customer_order):
         self.delivery_pending = True
-        yield self.env.timeout(18)
+        yield self.env.timeout(21)
         quantity = self.warehouse.calculate_order_quantity(
             delivery_duration=(self.delivery_duration + self.lead_time - self.expiration_extension),
         )
-        # quantity += 2 * customer_order.get_quantity() / customer_order.get_debtor().get_average_demand()
         self.raw_material_supplier.handle_order(order.Order(quantity=quantity, debtor=self))
 
     def place_order(self, customer_order):
@@ -108,11 +104,6 @@ class Manufacturer:
         customer = customer_order.get_debtor()
         quantity = self.warehouse.calculate_order_quantity(
             delivery_duration=(self.delivery_duration + self.lead_time - self.expiration_extension),
-            # Fulfill order in terms of quantity AND expiration date.
-            # + (order_quantity / customer.get_average_demand())
-            # Fulfill order in terms of quantity AND expiration date.
-            # + (order_quantity / customer.get_average_demand())
-            # - self.expiration_extension
         )
         quantity += 2 * order_quantity / customer.get_average_demand()
         self.raw_material_supplier.handle_order(order.Order(quantity=quantity, debtor=self))
@@ -130,7 +121,10 @@ class Manufacturer:
         return self.address
 
     def get_lead_time(self):
-        return self.lead_time
+        if self.dis_start <= self.env.now <= (self.dis_start + self.dis_duration) and self.dis_duration > 0:
+            return self.dis_lead_time
+        else:
+            return self.lead_time
 
     def get_delivery_duration(self):
         return self.delivery_duration

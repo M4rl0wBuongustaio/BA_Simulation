@@ -14,7 +14,7 @@ def average_iterations(df):
             mean_df.at[date, 'date'] = date
             mean_df.at[date, column] = df[column].loc[
                 df['date'] == date
-                ].mean().round(decimals=2)
+                ].mean().round(decimals=1)
             mean_df.at[date, column + '_std'] = df[column].loc[
                 df['date'] == date
                 ].std()
@@ -49,6 +49,6 @@ def save_data(df, name):
     df.to_csv(name)
 
 
-df = load_dataframe('scenario_0')
+df = load_dataframe('scenario_2')
 df = average_iterations(df)
-save_data(df=df, name='scenario_0_averaged')
+save_data(df=df, name='scenario_2_averaged')
