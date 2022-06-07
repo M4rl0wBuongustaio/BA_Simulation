@@ -1,10 +1,11 @@
 from resources import order, carrier, product_batch, delivery
 import numpy as np
 import queue
+import config
 
 
 class Manufacturer:
-    def __init__(self, env, raw_material_supplier, dis_start, dis_duration, dis_lead_time,
+    def __init__(self, env, raw_material_supplier, dis_start, dis_duration, dis_lead_time, service_level,
                  expiration_extension, warehouse, delivery_duration, lead_time, address):
         self.env = env
         self.raw_material_supplier = raw_material_supplier
@@ -12,6 +13,8 @@ class Manufacturer:
         self.dis_duration = dis_duration
         self.expiration_extension = expiration_extension
         self.warehouse = warehouse
+        self.service_level = service_level
+        # TODO: Save delete delivery_duration
         self.delivery_duration = delivery_duration
         self.lead_time = lead_time
         self.dis_lead_time = dis_lead_time
@@ -37,7 +40,7 @@ class Manufacturer:
                 self.env.process(self.produce(customer_order))
             elif not self.delivery_pending:
                 self.add_backorder(customer_order)
-                self.place_order(customer_order)
+                self.place_scheduled_order()
         else:
             self.add_backorder(customer_order)
 
@@ -60,7 +63,7 @@ class Manufacturer:
                 self.env.process(self.produce(backorder))
             else:
                 self.add_backorder(backorder)
-                self.place_order(backorder)
+                self.place_scheduled_order()
                 break
 
     def produce(self, customer_order):
@@ -68,6 +71,7 @@ class Manufacturer:
         ex_date = self.warehouse.get_product_expiration_date(order_quantity)
         pro_date = self.warehouse.get_product_production_date(order_quantity)
         list_product_batch = []
+        # Produce products and extend expiration date.
         for key in ex_date.keys():
             i = 0
             pb = product_batch.ProductBatch(expiration_date=key + self.expiration_extension, quantity=ex_date[key],
@@ -82,22 +86,24 @@ class Manufacturer:
             delivery_duration=(self.delivery_duration + self.lead_time - self.expiration_extension),
             remove_expired=False
         )
-        if available_stock <= reorder_point and not self.delivery_pending:
-            self.env.process(self.place_scheduled_order(customer_order))
-        yield self.env.timeout(abs(round(np.random.normal(loc=self.get_lead_time(), scale=1, size=1)[0])))
+        # Ignore for pushed order.
+        # if available_stock <= reorder_point and not self.delivery_pending:
+        #    self.env.process(self.place_scheduled_order())
+        yield self.env.timeout(self.get_lead_time())
         self.initiate_delivery(var_delivery)
 
     def initiate_delivery(self, var_delivery):
         self.env.process(carrier.Carrier(self.env, delivery=var_delivery).deliver())
 
-    def place_scheduled_order(self, customer_order):
+    def place_scheduled_order(self):
         self.delivery_pending = True
-        yield self.env.timeout(21)
+        yield self.env.timeout(config.ANNUAL_DEMAND_WS)
         quantity = self.warehouse.calculate_order_quantity(
             delivery_duration=(self.delivery_duration + self.lead_time - self.expiration_extension),
         )
         self.raw_material_supplier.handle_order(order.Order(quantity=quantity, debtor=self))
 
+    '''
     def place_order(self, customer_order):
         self.delivery_pending = True
         order_quantity = customer_order.get_quantity()
@@ -107,6 +113,7 @@ class Manufacturer:
         )
         quantity += 2 * order_quantity / customer.get_average_demand()
         self.raw_material_supplier.handle_order(order.Order(quantity=quantity, debtor=self))
+    '''
 
     def add_backorder(self, customer_order):
         self.backorder.put_nowait(customer_order)

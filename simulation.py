@@ -13,27 +13,27 @@ start = datetime.now()
 def simulate(iteration):
     env = simpy.Environment()
     expiration = 20
-    extension = 30
+    extension = 10
     delivery_data = [[0], [0]]
 
     # Raw Material Supplier
     rms = raw_material_supplier.RawMaterialSupplier(env=env, dis_start=0, dis_duration=0, expiration_date=expiration)
 
     # Manufacturer
-    mr_product_batch = product_batch.ProductBatch(quantity=420, production_date=23, expiration_date=43)
+    mr_product_batch = product_batch.ProductBatch(quantity=530, production_date=23, expiration_date=43)
     mr_stock = [mr_product_batch]
     mr_warehouse = warehouse.Warehouse(env=env, reorder_point=5, target_stock=420, stock=mr_stock)
-    mr = manufacturer.Manufacturer(env=env, raw_material_supplier=rms, dis_start=183, dis_duration=60,
+    mr = manufacturer.Manufacturer(env=env, raw_material_supplier=rms, dis_start=0, dis_duration=0,
                                    expiration_extension=extension, warehouse=mr_warehouse, delivery_duration=1,
-                                   lead_time=2, dis_lead_time=20, address=0)
+                                   lead_time=2, dis_lead_time=0, address=0, service_level=1)
 
     # Wholesaler
-    ws_product_batch = product_batch.ProductBatch(quantity=450, production_date=0,
-                                                  expiration_date=expiration + extension - 5)
+    ws_product_batch = product_batch.ProductBatch(quantity=480, production_date=0,
+                                                  expiration_date=expiration + extension)
     ws_stock = [ws_product_batch]
     ws_warehouse = warehouse.Warehouse(env=env, reorder_point=75, target_stock=450, stock=ws_stock)
     ws = wholesaler.Wholesaler(env=env, warehouse=ws_warehouse, manufacturer=mr, dis_start=0, dis_duration=0,
-                               delivery_duration=1, address=1, average_demand=15)
+                               delivery_duration=1, address=1, average_demand=15, service_level=1)
 
     var_monitor = monitoring.Monitoring(ws_warehouse=ws_warehouse, mr_warehouse=mr_warehouse)
 
@@ -86,14 +86,14 @@ def simulate(iteration):
             'date': delivery_data[0],
             'expiration_date': delivery_data[1]
         }
-    ), name='delivery_data_s2')
-    var_monitor.save_data(name='scenario_2', df=var_monitor.get_data_set())
+    ), name='delivery_data_s0')
+    var_monitor.save_data(name='scenario_0', df=var_monitor.get_data_set())
     # var_monitor.plot()
     # print(ws_warehouse.get_order_dates())
     # print(mr_warehouse.get_order_dates())
 
 
-for i in range(1000):
+for i in range(1):
     simulate(iteration=i)
 
 end = datetime.now()

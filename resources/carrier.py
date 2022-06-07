@@ -1,5 +1,4 @@
 from config import ROUTING
-import numpy as np
 
 
 class Carrier:
@@ -9,10 +8,5 @@ class Carrier:
 
     def deliver(self):
         debtor_address = self.delivery.get_debtor().get_address()
-        for rout in ROUTING.keys():
-            if rout == debtor_address:
-                yield self.env.timeout(
-                    abs(round(np.random.normal(loc=ROUTING[rout], scale=1, size=1)[0]))
-                )
-                self.delivery.get_debtor().receive_delivery(self.delivery)
-                break
+        yield self.env.timeout(ROUTING[debtor_address])
+        self.delivery.get_debtor().receive_delivery(self.delivery)

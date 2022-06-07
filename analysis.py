@@ -49,6 +49,6 @@ def save_data(df, name):
     df.to_csv(name)
 
 
-df = load_dataframe('scenario_2')
+df = load_dataframe('scenario_0')
 df = average_iterations(df)
-save_data(df=df, name='scenario_2_averaged')
+save_data(df=df, name='scenario_0_averaged')
