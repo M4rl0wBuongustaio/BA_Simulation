@@ -6,7 +6,7 @@ import config
 
 class Manufacturer:
     def __init__(self, env, raw_material_supplier, dis_start, dis_duration, dis_lead_time, service_level,
-                 expiration_extension, warehouse, delivery_duration, lead_time, address):
+                 expiration_extension, warehouse, lead_time, address):
         self.env = env
         self.raw_material_supplier = raw_material_supplier
         self.dis_start = dis_start
@@ -15,7 +15,6 @@ class Manufacturer:
         self.warehouse = warehouse
         self.service_level = service_level
         # TODO: Save delete delivery_duration
-        self.delivery_duration = delivery_duration
         self.lead_time = lead_time
         self.dis_lead_time = dis_lead_time
         self.address = address
@@ -47,8 +46,9 @@ class Manufacturer:
     def enough_stock(self, customer_order):
         order_quantity = customer_order.get_quantity()
         customer = customer_order.get_debtor()
+        delivery_duration = config.ROUTING[customer_order.get_debtor().get_address()]
         available_stock = self.warehouse.get_available_stock(
-            delivery_duration=(self.delivery_duration + self.lead_time - self.expiration_extension),
+            delivery_duration=(delivery_duration + self.lead_time - self.expiration_extension),
             remove_expired=True
         )
         if available_stock >= order_quantity:
@@ -82,8 +82,9 @@ class Manufacturer:
         var_delivery = delivery.Delivery(product_batch=list_product_batch, debtor=customer_order.get_debtor())
         self.warehouse.reduce_stock(order_quantity)
         reorder_point = self.warehouse.get_reorder_point()
+        delivery_duration = config.ROUTING[customer_order.get_debtor().get_address()]
         available_stock = self.warehouse.get_available_stock(
-            delivery_duration=(self.delivery_duration + self.lead_time - self.expiration_extension),
+            delivery_duration=(delivery_duration + self.lead_time - self.expiration_extension),
             remove_expired=False
         )
         # Ignore for pushed order.
@@ -97,11 +98,12 @@ class Manufacturer:
 
     def place_scheduled_order(self):
         self.delivery_pending = True
-        yield self.env.timeout(config.ANNUAL_DEMAND_WS)
+        '''
         quantity = self.warehouse.calculate_order_quantity(
             delivery_duration=(self.delivery_duration + self.lead_time - self.expiration_extension),
         )
-        self.raw_material_supplier.handle_order(order.Order(quantity=quantity, debtor=self))
+        '''
+        self.raw_material_supplier.handle_order(order.Order(quantity=372, debtor=self))
 
     '''
     def place_order(self, customer_order):
@@ -132,9 +134,6 @@ class Manufacturer:
             return self.dis_lead_time
         else:
             return self.lead_time
-
-    def get_delivery_duration(self):
-        return self.delivery_duration
 
     def add_daily_order(self):
         self.daily_orders += 1

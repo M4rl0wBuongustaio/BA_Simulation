@@ -10,30 +10,40 @@ from datetime import datetime
 start = datetime.now()
 
 
-def simulate(iteration):
+def simulate(iteration, mr_attributes):
     env = simpy.Environment()
-    expiration = 20
-    extension = 10
+    expiration = 10
+    extension = 20
     delivery_data = [[0], [0]]
+    # Store manufacturers.
+    mr_list = []
 
     # Raw Material Supplier
     rms = raw_material_supplier.RawMaterialSupplier(env=env, dis_start=0, dis_duration=0, expiration_date=expiration)
 
     # Manufacturer
-    mr_product_batch = product_batch.ProductBatch(quantity=530, production_date=23, expiration_date=43)
+    mr_product_batch = product_batch.ProductBatch(quantity=0, production_date=0, expiration_date=0 + expiration)
     mr_stock = [mr_product_batch]
     mr_warehouse = warehouse.Warehouse(env=env, reorder_point=5, target_stock=420, stock=mr_stock)
-    mr = manufacturer.Manufacturer(env=env, raw_material_supplier=rms, dis_start=0, dis_duration=0,
-                                   expiration_extension=extension, warehouse=mr_warehouse, delivery_duration=1,
-                                   lead_time=2, dis_lead_time=0, address=0, service_level=1)
+
+    def manufacturer_generator():
+        for count in range(len(mr_attributes)):
+            mr = manufacturer.Manufacturer(env=env, raw_material_supplier=rms, dis_start=mr_attributes[count][0],
+                                           dis_duration=mr_attributes[count][1], expiration_extension=extension,
+                                           warehouse=mr_warehouse, lead_time=2, dis_lead_time=mr_attributes[count][2],
+                                           address=0, service_level=0.9)
+            mr_list.append(mr)
+
+    # Initiate generation of manufacturers.
+    manufacturer_generator()
 
     # Wholesaler
-    ws_product_batch = product_batch.ProductBatch(quantity=480, production_date=0,
-                                                  expiration_date=expiration + extension)
+    ws_product_batch = product_batch.ProductBatch(quantity=372, production_date=0,
+                                                  expiration_date=expiration + extension - 5)
     ws_stock = [ws_product_batch]
     ws_warehouse = warehouse.Warehouse(env=env, reorder_point=75, target_stock=450, stock=ws_stock)
-    ws = wholesaler.Wholesaler(env=env, warehouse=ws_warehouse, manufacturer=mr, dis_start=0, dis_duration=0,
-                               delivery_duration=1, address=1, average_demand=15, service_level=1)
+    ws = wholesaler.Wholesaler(env=env, warehouse=ws_warehouse, dis_start=0, dis_duration=0,
+                               delivery_duration=1, address=1, average_demand=15, service_level=0.9, mr_list=mr_list)
 
     var_monitor = monitoring.Monitoring(ws_warehouse=ws_warehouse, mr_warehouse=mr_warehouse)
 
@@ -43,30 +53,34 @@ def simulate(iteration):
                 ws_service_level = 1
             else:
                 ws_service_level = (ws.get_daily_orders() - ws.get_daily_backorders()) / ws.get_daily_orders()
-            if mr.get_daily_orders() == 0:
-                mr_service_level = 1
-            else:
-                mr_service_level = (mr.get_daily_orders() - mr.get_daily_backorders()) / mr.get_daily_orders()
             data = {
-                'iteration': iteration,
-                'date': env.now,
-                'mr_stock': mr_warehouse.get_available_stock(
+                'iteration': [iteration],
+                'date': [env.now],
+                'ws_stock': [ws_warehouse.get_available_stock(
                     delivery_duration=0,
-                    remove_expired=True
-                ),
-                'mr_backorder': mr.get_count_backorders(),
-                'mr_service_level': mr_service_level,
-                'mr_depreciated_goods': mr_warehouse.get_depreciated_goods_count(),
-                'ws_stock': ws_warehouse.get_available_stock(
-                    delivery_duration=0,
-                    remove_expired=True
-                ),
-                'ws_backorder': ws.get_count_backorders(),
-                'ws_service_level': ws_service_level,
-                'ws_depreciated_goods': ws_warehouse.get_depreciated_goods_count()
+                    remove_expired=False
+                )],
+                'ws_backorder': [ws.get_count_backorders()],
+                'ws_service_level': [ws_service_level],
+                'ws_depreciated_goods': [ws_warehouse.get_depreciated_goods_count()]
             }
             var_monitor.append_data(data=data)
             ws.reset_daily_back_orders()
+            for mr in mr_list:
+                if mr.get_daily_orders() == 0:
+                    mr_service_level = 1
+                else:
+                    mr_service_level = (mr.get_daily_orders() - mr.get_daily_backorders()) / mr.get_daily_orders()
+                count = 0
+                mr_data = {'mr' + str(count) + '_backorder': [mr.get_count_backorders()],
+                           'mr' + str(count) + '_service_level': [mr_service_level],
+                           'mr' + str(count) + '_depreciated_goods': [mr_warehouse.get_depreciated_goods_count()],
+                           'mr' + str(count) + '_stock': [mr_warehouse.get_available_stock(
+                               delivery_duration=0,
+                               remove_expired=False
+                           )]}
+                data.update(mr_data)
+                count += 1
             yield env.timeout(1)
 
     def customer_generator():
@@ -93,8 +107,13 @@ def simulate(iteration):
     # print(mr_warehouse.get_order_dates())
 
 
+# Structure: {id: [dis_start, dis_duration, dis_lead_time]}
+mr_attributes = {
+    0: [0, 0, 0]
+}
+
 for i in range(1):
-    simulate(iteration=i)
+    simulate(iteration=i, mr_attributes=mr_attributes)
 
 end = datetime.now()
 print(end - start)

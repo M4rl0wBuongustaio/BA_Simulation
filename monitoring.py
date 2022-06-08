@@ -12,7 +12,7 @@ class Monitoring:
         self.path = '/Users/leonbecker/PycharmProjects/BA_Simulation/'
 
     def append_data(self, data):
-        self.data_set = self.data_set.append(data, ignore_index=True)
+        self.data_set = pd.concat([self.data_set, pd.DataFrame.from_dict(data)])
 
     def print_data(self):
         print(self.data_set)
