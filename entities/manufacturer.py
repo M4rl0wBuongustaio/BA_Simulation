@@ -103,7 +103,7 @@ class Manufacturer:
             delivery_duration=(self.delivery_duration + self.lead_time - self.expiration_extension),
         )
         '''
-        self.raw_material_supplier.handle_order(order.Order(quantity=372, debtor=self))
+        self.raw_material_supplier.handle_order(order.Order(quantity=361, debtor=self))
 
     '''
     def place_order(self, customer_order):

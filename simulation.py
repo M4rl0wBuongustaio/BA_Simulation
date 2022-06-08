@@ -14,7 +14,7 @@ def simulate(iteration, mr_attributes):
     env = simpy.Environment()
     expiration = 10
     extension = 20
-    delivery_data = [[0], [0]]
+    delivery_data = [[0], [0], [0]]
     # Store manufacturers.
     mr_list = []
 
@@ -38,7 +38,7 @@ def simulate(iteration, mr_attributes):
     manufacturer_generator()
 
     # Wholesaler
-    ws_product_batch = product_batch.ProductBatch(quantity=372, production_date=0,
+    ws_product_batch = product_batch.ProductBatch(quantity=346, production_date=0,
                                                   expiration_date=expiration + extension - 5)
     ws_stock = [ws_product_batch]
     ws_warehouse = warehouse.Warehouse(env=env, reorder_point=75, target_stock=450, stock=ws_stock)
@@ -64,8 +64,6 @@ def simulate(iteration, mr_attributes):
                 'ws_service_level': [ws_service_level],
                 'ws_depreciated_goods': [ws_warehouse.get_depreciated_goods_count()]
             }
-            var_monitor.append_data(data=data)
-            ws.reset_daily_back_orders()
             for mr in mr_list:
                 if mr.get_daily_orders() == 0:
                     mr_service_level = 1
@@ -81,6 +79,8 @@ def simulate(iteration, mr_attributes):
                            )]}
                 data.update(mr_data)
                 count += 1
+            var_monitor.append_data(data=data)
+            ws.reset_daily_back_orders()
             yield env.timeout(1)
 
     def customer_generator():
@@ -88,7 +88,8 @@ def simulate(iteration, mr_attributes):
             count_customers = abs(round(np.random.normal(loc=15, scale=1, size=1)[0]))
             for i in range(count_customers):
                 customer.Customer(
-                    env=env, quantity=1, wholesaler=ws, address=2, delivery_monitoring=delivery_data
+                    env=env, quantity=1, wholesaler=ws, address=2, delivery_monitoring=delivery_data,
+                    iteration=iteration
                 ).place_order()
             yield env.timeout(1)
 
@@ -97,8 +98,9 @@ def simulate(iteration, mr_attributes):
     env.run(until=365)
     var_monitor.save_data(df=pd.DataFrame(
         {
-            'date': delivery_data[0],
-            'expiration_date': delivery_data[1]
+            'iteration': delivery_data[0],
+            'date': delivery_data[1],
+            'expiration_date': delivery_data[2]
         }
     ), name='delivery_data_s0')
     var_monitor.save_data(name='scenario_0', df=var_monitor.get_data_set())
@@ -112,7 +114,7 @@ mr_attributes = {
     0: [0, 0, 0]
 }
 
-for i in range(1):
+for i in range(100):
     simulate(iteration=i, mr_attributes=mr_attributes)
 
 end = datetime.now()
