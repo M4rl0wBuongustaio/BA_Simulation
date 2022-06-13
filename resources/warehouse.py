@@ -22,7 +22,7 @@ class Warehouse:
         today = self.env.now
         # Count not expired product batches only.
         for product_batch in self.stock:
-            if (product_batch.get_expiration_date() - delivery_duration) > today:  # = today:
+            if (product_batch.get_expiration_date() - delivery_duration) > today:
                 stock += product_batch.get_quantity()
                 if remove_expired:
                     valid_batches.append(product_batch)
