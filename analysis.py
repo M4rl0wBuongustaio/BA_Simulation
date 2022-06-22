@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import math
@@ -33,33 +32,16 @@ def average_iterations(df, iteration, var_ci_coefficient):
     return mean_df
 
 
-def plot_inventories(name, df, title):
-    df.plot(
-        x='date',
-        y=['ws_stock', 'ws_backorder'],
-        kind='line',
-        title=title,
-        grid=True,
-        figsize=(19.2, 10.8)
-    )
-    plt.axhline(
-        y=150,
-        c='black'
-    )
-    plt.savefig(name + '.pdf')
-    plt.show()
-
-
 def save_data(df, name):
     df.to_csv(name)
 
 
-df = load_dataframe('scenario_0')
+df = load_dataframe('scenario_0_0')
 # 1.96 confidence interval coefficient for 95%
 df = average_iterations(df, iteration=100, var_ci_coefficient=1.96)
-save_data(df=df, name='scenario_0_averaged_sl_0.9')
+save_data(df=df, name='scenario_0_0_averaged')
 
-df = load_dataframe('delivery_data_s0')
+df = load_dataframe('delivery_data_s0_0')
 # 1.96 confidence interval coefficient for 95%
 df = average_iterations(df, iteration=100, var_ci_coefficient=1.96)
-save_data(df=df, name='delivery_data_s0_averaged_sl_0.9')
+save_data(df=df, name='delivery_data_s0_0_averaged')

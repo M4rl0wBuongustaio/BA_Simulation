@@ -6,26 +6,25 @@ import queue
 
 
 class Wholesaler:
-    def __init__(self, env, warehouse, dis_start, dis_duration, delivery_duration, address,average_demand,
-                 service_level, mr_list, daily_resource):
+    def __init__(self, env, warehouse, delivery_duration, address, average_demand, service_level, mr_list,
+                 daily_resource, setup_time):
         self.env = env
         self.warehouse = warehouse
-        self.dis_start = dis_start
-        self.dis_duration = dis_duration
         self.delivery_duration = delivery_duration
-        # Calculate the delivery duration to wholesaler from upstream supplier. Relevant for order quantity.
         self.service_level = service_level
         self.mr_list = mr_list
-        # Get lead time and address of manufacturer.
+        self.setup_time = setup_time
         self.mr_lead_time = mr_list[0].get_lead_time()
         self.mr_address = mr_list[0].get_address()
         self.daily_orders = 0
         self.daily_backorders = 0
+        self.daily_shipment = 0
         self.daily_resource = daily_resource
         self.initial_daily_resource = daily_resource
         self.address = address
         self.average_demand = average_demand
         self.delivery_pending = False
+        self.is_first_change = True
         self.backorder = queue.Queue()
 
     def receive_delivery(self, delivery):
@@ -51,47 +50,32 @@ class Wholesaler:
 
     def handle_order(self, customer_order):
         order_quantity = customer_order.get_quantity()
-        '''
-        order_relevant_stock = self.warehouse.get_available_stock(
-            delivery_duration=self.mr_lead_time + config.ROUTING[self.mr_address],
-            remove_expired=False
-        )
-        '''
         available_stock = self.warehouse.get_available_stock(
             delivery_duration=self.delivery_duration,
             remove_expired=True
         )
-        '''
-        if available_stock <= (
-                self.warehouse.get_reorder_point() + (
-                self.average_demand * config.ROUTING[self.mr_address])) and not self.order_notice_pushed:
-            self.push_order_notice()
-        '''
         reorder_point = self.warehouse.get_reorder_point()
         if available_stock >= order_quantity:
             if (available_stock - order_quantity) < reorder_point and not self.delivery_pending:
-                self.place_order()
+                self.delivery_pending = True
+                self.env.process(self.place_order())
             self.initiate_delivery(customer_order)
             self.use_daily_resource()
         elif not self.delivery_pending:
-            self.place_order()
+            self.delivery_pending = True
+            self.env.process(self.place_order())
             self.add_backorder(customer_order)
         else:
             self.add_backorder(customer_order)
 
     def place_order(self):
-        self.delivery_pending = True
-        # order_quantity = self.warehouse.calculate_order_quantity(self.delivery_duration)
-        # order_quantity += self.average_demand * self.delivery_duration_us
-        # Minner & Transchel approach:
-        order_quantity = np.quantile(config.ANNUAL_DEMAND_WS, self.service_level)
+        order_quantity = np.quantile(config.ANNUAL_DEMAND_WS, self.service_level)  # Minner & Transchel approach
         order_quantity += self.average_demand * (self.mr_lead_time + config.ROUTING[self.address])
-        # In case of backorders increase order quantity accordingly.
-        # print('ws ' + str(order_quantity))
-        responsible_mr = self.get_responsible_manufacturer()
+        responsible_mr = yield self.env.process(self.get_responsible_manufacturer())
         responsible_mr.receive_order(order.Order(quantity=order_quantity, debtor=self))
 
     def initiate_delivery(self, customer_order):
+        self.add_daily_shipment()
         ex_date = self.warehouse.get_product_expiration_date(customer_order.get_quantity())
         pro_date = self.warehouse.get_product_production_date(customer_order.get_quantity())
         var_product_batches = []
@@ -110,10 +94,17 @@ class Wholesaler:
 
     def get_responsible_manufacturer(self):
         if len(self.mr_list) == 1:
+            yield self.env.timeout(0)
             return self.mr_list[0]
-        for mr in self.mr_list:
-            if mr.get_lead_time() == self.mr_lead_time:
-                return mr
+        for i in range(len(self.mr_list)):
+            if self.mr_list[i].get_lead_time() == self.mr_lead_time:
+                if i > 0 and self.is_first_change:
+                    self.is_first_change = False
+                    yield self.env.timeout(self.setup_time)
+                    return self.mr_list[i]
+                else:
+                    yield self.env.timeout(0)
+                    return self.mr_list[i]
 
     def add_backorder(self, customer_order):
         self.add_daily_backorder()
@@ -160,3 +151,12 @@ class Wholesaler:
 
     def use_daily_resource(self):
         self.daily_resource -= 1
+
+    def add_daily_shipment(self):
+        self.daily_shipment += 1
+
+    def get_daily_shipment(self):
+        return self.daily_shipment
+
+    def reset_daily_shipment(self):
+        self.daily_shipment = 0

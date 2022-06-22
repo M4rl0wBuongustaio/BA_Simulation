@@ -11,7 +11,7 @@ from datetime import datetime
 start = datetime.now()
 
 
-def simulate(iteration, mr_attributes):
+def simulate(iteration, mr_attributes, var_file_name):
     env = simpy.Environment()
     expiration = 10
     extension = 20
@@ -26,16 +26,20 @@ def simulate(iteration, mr_attributes):
 
     # Manufacturer
     mr_lead_time = 2
-    mr_product_batch = product_batch.ProductBatch(quantity=0, production_date=0, expiration_date=0 + expiration)
+    mr_product_batch = product_batch.ProductBatch(quantity=0, production_date=0, expiration_date=0)
     mr_stock = [mr_product_batch]
-    mr_warehouse = warehouse.Warehouse(env=env, reorder_point=5, target_stock=420, stock=mr_stock)
+    mr_warehouse = warehouse.Warehouse(env=env, reorder_point=5, stock=mr_stock)
 
     def manufacturer_generator():
         for count in range(len(mr_attributes)):
+            var_dis_lead_time = 0
+            if mr_attributes[count][2] != 0:
+                var_dis_lead_time = (1 / mr_attributes[count][2]) * mr_lead_time
             mr = manufacturer.Manufacturer(env=env, raw_material_supplier=rms, dis_start=mr_attributes[count][0],
                                            dis_duration=mr_attributes[count][1], expiration_extension=extension,
                                            warehouse=mr_warehouse, lead_time=mr_lead_time,
-                                           dis_lead_time=mr_attributes[count][2], address=0, service_level=0.9)
+                                           dis_lead_time=var_dis_lead_time, address=0,
+                                           service_level=0.9)
             mr_list.append(mr)
 
     # Initiate generation of manufacturers.
@@ -50,10 +54,10 @@ def simulate(iteration, mr_attributes):
     ws_product_batch = product_batch.ProductBatch(quantity=ws_initial_stock, production_date=0,
                                                   expiration_date=expiration + extension - 6)
     ws_stock = [ws_product_batch]
-    ws_warehouse = warehouse.Warehouse(env=env, reorder_point=105, target_stock=450, stock=ws_stock)
-    ws = wholesaler.Wholesaler(env=env, warehouse=ws_warehouse, dis_start=0, dis_duration=0,
-                               delivery_duration=1, address=ws_address, average_demand=ws_average_demand,
-                               service_level=ws_service_level, mr_list=mr_list, daily_resource=2*ws_average_demand)
+    ws_warehouse = warehouse.Warehouse(env=env, reorder_point=105, stock=ws_stock)
+    ws = wholesaler.Wholesaler(env=env, warehouse=ws_warehouse, delivery_duration=1, address=ws_address,
+                               average_demand=ws_average_demand, setup_time=1, service_level=ws_service_level,
+                               mr_list=mr_list, daily_resource=2 * ws_average_demand)
 
     var_monitor = monitoring.Monitoring(ws_warehouse=ws_warehouse, mr_warehouse=mr_warehouse)
 
@@ -66,6 +70,7 @@ def simulate(iteration, mr_attributes):
             data = {
                 'iteration': [iteration],
                 'date': [env.now],
+                'ws_daily_shipment': [ws.get_daily_shipment()],
                 'ws_stock': [ws_warehouse.get_available_stock(
                     delivery_duration=0,
                     remove_expired=False
@@ -90,7 +95,10 @@ def simulate(iteration, mr_attributes):
                            )]}
                 data.update(mr_data)
             var_monitor.append_data(data=data)
+            ws.reset_daily_shipment()
             ws.reset_daily_back_orders()
+            # Reset daily resource for wholesaler after each day.
+            ws.reset_daily_resource()
             yield env.timeout(1)
 
     def customer_generator():
@@ -102,34 +110,29 @@ def simulate(iteration, mr_attributes):
                     iteration=iteration
                 ).place_order()
             yield env.timeout(1)
-            # Reset daily resource for wholesaler after each day.
-            ws.reset_daily_resource()
-
 
     env.process(customer_generator())
     env.process(monitor())
     env.run(until=365)
+    # Save data
     var_monitor.save_data(df=pd.DataFrame(
         {
             'iteration': delivery_data[0],
             'date': delivery_data[1],
             'expiration_date': delivery_data[2]
         }
-    ), name='delivery_data_s0')
-    var_monitor.save_data(name='scenario_0', df=var_monitor.get_data_set())
-    # var_monitor.plot()
-    # print(ws_warehouse.get_order_dates())
-    # print(mr_warehouse.get_order_dates())
+    ), name='delivery_data_s' + var_file_name)
+    var_monitor.save_data(name='scenario_' + var_file_name, df=var_monitor.get_data_set())
 
 
-# Structure: {id: [dis_start, dis_duration, dis_lead_time]}
+# Structure: {id: [dis_start, dis_duration, dis_lead_time_coefficient]}
 mr_attributes = {
     0: [0, 0, 0],
-    # 1: [0, 0, 0]
+
 }
 
-for i in range(1):
-    simulate(iteration=i, mr_attributes=mr_attributes)
+for i in range(100):
+    simulate(iteration=i, mr_attributes=mr_attributes, var_file_name='0_0')
 
 end = datetime.now()
 print(end - start)

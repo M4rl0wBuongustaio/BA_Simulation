@@ -1,9 +1,7 @@
 class Warehouse:
-    def __init__(self, env, reorder_point, target_stock, stock):
+    def __init__(self, env, reorder_point,  stock):
         self.env = env
         self.reorder_point = reorder_point
-        self.target_stock = target_stock
-        # A list of product_batch objects.
         self.stock = stock
         self.order_date = []
         self.depreciated_goods = 0

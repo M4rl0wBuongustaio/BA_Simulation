@@ -28,4 +28,5 @@ class Customer:
     def receive_delivery(self, delivery):
         self.delivery_monitoring[0].append(self.iteration)
         self.delivery_monitoring[1].append(self.env.now)
+        # Record remaining shelf life.
         self.delivery_monitoring[2].append(delivery.get_product_batch()[0].get_expiration_date() - self.env.now)

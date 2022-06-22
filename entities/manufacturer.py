@@ -1,4 +1,3 @@
-from entities import wholesaler
 from resources import order, carrier, product_batch, delivery
 import numpy as np
 import config
@@ -40,13 +39,12 @@ class Manufacturer:
                 self.env.process(self.produce(customer_order))
             elif not self.delivery_pending:
                 self.add_backorder(customer_order)
-                self.place_scheduled_order(customer_order.get_debtor())
+                self.place_order(customer_order)
         else:
             self.add_backorder(customer_order)
 
     def enough_stock(self, customer_order):
         order_quantity = customer_order.get_quantity()
-        customer = customer_order.get_debtor()
         delivery_duration = config.ROUTING[customer_order.get_debtor().get_address()]
         available_stock = self.warehouse.get_available_stock(
             delivery_duration=(delivery_duration + self.lead_time - self.expiration_extension),
@@ -64,7 +62,7 @@ class Manufacturer:
                 self.env.process(self.produce(backorder))
             else:
                 self.add_backorder(backorder)
-                self.place_scheduled_order(backorder.get_debtor())
+                self.place_order(backorder.get_debtor())
                 break
 
     def produce(self, customer_order):
@@ -82,17 +80,6 @@ class Manufacturer:
             i += 1
         var_delivery = delivery.Delivery(product_batch=list_product_batch, debtor=customer_order.get_debtor())
         self.warehouse.reduce_stock(order_quantity)
-        '''
-        reorder_point = self.warehouse.get_reorder_point()
-        delivery_duration = config.ROUTING[customer_order.get_debtor().get_address()]
-        available_stock = self.warehouse.get_available_stock(
-            delivery_duration=(delivery_duration + self.lead_time - self.expiration_extension),
-            remove_expired=False
-        )
-        '''
-        # Ignore for pushed order.
-        # if available_stock <= reorder_point and not self.delivery_pending:
-        #    self.env.process(self.place_scheduled_order())
         customer_average_demand = customer_order.get_debtor().get_average_demand()
         customer_delivery_duration = config.ROUTING[customer_order.get_debtor().get_address()]
         lead_time = self.get_lead_time()
@@ -107,29 +94,9 @@ class Manufacturer:
     def initiate_delivery(self, var_delivery):
         self.env.process(carrier.Carrier(self.env, delivery=var_delivery).deliver())
 
-    def place_scheduled_order(self, debtor: wholesaler):
-        self.delivery_pending = True
-        '''
-        quantity = self.warehouse.calculate_order_quantity(
-            delivery_duration=(self.delivery_duration + self.lead_time - self.expiration_extension),
-        )
-        '''
-        order_quantity = np.quantile(config.ANNUAL_DEMAND_WS, debtor.get_service_level())
-        order_quantity += debtor.get_average_demand() * (config.ROUTING[debtor.get_address()] + self.lead_time)
-        # print('MR ' + str(order_quantity))
-        self.raw_material_supplier.handle_order(order.Order(quantity=order_quantity, debtor=self))
-
-    '''
     def place_order(self, customer_order):
         self.delivery_pending = True
-        order_quantity = customer_order.get_quantity()
-        customer = customer_order.get_debtor()
-        quantity = self.warehouse.calculate_order_quantity(
-            delivery_duration=(self.delivery_duration + self.lead_time - self.expiration_extension),
-        )
-        quantity += 2 * order_quantity / customer.get_average_demand()
-        self.raw_material_supplier.handle_order(order.Order(quantity=quantity, debtor=self))
-    '''
+        self.raw_material_supplier.handle_order(order.Order(quantity=customer_order.get_quantity(), debtor=self))
 
     def add_backorder(self, customer_order):
         self.backorder.put_nowait(customer_order)

@@ -19,4 +19,9 @@ def annual_demand_generator(simulation_duration, w, mu, sigma):
     return annual_demand_mean
 
 
-print(annual_demand_generator(365, 24, 15, 2))
+print(annual_demand_generator(
+    simulation_duration=365,
+    w=23,
+    mu=15,
+    sigma=2)
+)
