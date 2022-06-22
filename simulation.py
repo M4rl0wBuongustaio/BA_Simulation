@@ -16,7 +16,7 @@ def simulate(iteration, mr_attributes, var_file_name):
     expiration = 10
     extension = 20
     delivery_data = [[0], [0], [0]]
-    # Demand
+    # Demand distribution
     mu, sigma = 15, 2
     # Store manufacturers.
     mr_list = []
@@ -128,7 +128,6 @@ def simulate(iteration, mr_attributes, var_file_name):
 # Structure: {id: [dis_start, dis_duration, dis_lead_time_coefficient]}
 mr_attributes = {
     0: [0, 0, 0],
-
 }
 
 for i in range(100):
