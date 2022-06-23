@@ -7,7 +7,7 @@ The following is a step-by-step guide to running a simulation on your own.
 
 After you installed the ``requirements.py`` please follow the following instruction. 
 
-To initiate the simulation parameters, run the simulation and prepare data for analysis you need the following files:
+To initiate the simulation parameters, run the simulation and preprocess data for analysis you need the following files:
 - `simulation.py`
 - `annual_demand_generator.py`
 - `analysis.py`
@@ -31,8 +31,9 @@ To initiate the simulation parameters, run the simulation and prepare data for a
 Once you are done setting up the parameters, start the simulation by running `simulation.py`. <br>
 The end of the simulation will be indicated in the console by displaying the needed time to finish the program. 
 
-### Data Preparation for Analysis
+### Data Preprocessing for Analysis
 
-Once your simulation run finished successfully you can now perform the data preparation by calculating KPIs <br>
-like the mean, standard deviation, confidence interval etc. <br>
+Once your simulation run finished successfully you can now perform the data preprocess by calculating KPIs
+like the mean, standard deviation, confidence interval etc. 
 The confidence interval is set up as standard for 95%. You can adjust it by adjusting the `var_ci_coefficient` accordingly.
+Execute the data preprocessing by running `analysis.py`. The preprocessed files will be saved in the same directory as standard. 
