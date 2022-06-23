@@ -12,7 +12,7 @@ To initiate the simulation parameters, run the simulation and prepare data for a
 - `annual_demand_generator.py`
 - `analysis.py`
 
-### Initate the Simulation
+### Set up the Simulation
 
 1. First you have to decide on the subsequent parameters for creating the annual demand history:
    - Duration of your simulation (`simulation_duration`)
