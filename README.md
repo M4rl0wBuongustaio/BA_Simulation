@@ -1,5 +1,4 @@
-# BA_Simulation
-
+#Simulation in Logistics and Production of perishable products
 This simulation model was developed during writing a term paper 
 at Julius-Maximilians-Universität of Würzburg in the master program Information Systems. 
 It was developed harnessing the `Python` framework `SimPy` for discrete-event simulation.

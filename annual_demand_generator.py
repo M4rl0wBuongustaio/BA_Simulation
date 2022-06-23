@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 
+# Calculates the annual demand history needed for simulation (see README).
 def annual_demand_generator(simulation_duration, w, mu, sigma):
     demand_t = 0
     T = abs(round(simulation_duration / w))
