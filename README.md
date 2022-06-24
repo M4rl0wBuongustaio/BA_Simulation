@@ -10,6 +10,7 @@ After you installed the ``requirements.py`` please follow the following instruct
 To initiate the simulation parameters, run the simulation and preprocess data for analysis you need the following files:
 - `simulation.py`
 - `annual_demand_generator.py`
+- `config.py`
 - `analysis.py`
 
 ### Set up the Simulation
@@ -18,7 +19,8 @@ To initiate the simulation parameters, run the simulation and preprocess data fo
    - Duration of your simulation (`simulation_duration`)
    - Remaining shelf life of your product at the entity `Wholesaler` (`w`) <br> &rarr;  See first part of equation 2 in term paper (without D_w) 
    - Average demand per time step for normal distribution (`mu`) 
-   - Variance for normal distribution (`sigma`) 
+   - Variance for normal distribution (`sigma`)
+   - Insert the returned annual demand `list` in ``config.py`` as `ANNUAL_DEMAND_WS`
 2. Open the file `simulation.py` to set up the parameters for `Wholesaler` etc.<br>
    - Set up the parameters of the function `simulate` to your desired values. 
    <br> Note, that for parameters like e.g. `reorder_point` you should use the according equation (see term paper).
